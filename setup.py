@@ -11,7 +11,7 @@ setup(
     description="A terminal-based karaoke player",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/terminal-karaoke",
+    url="https://github.com/hissterical/terminal-karaoke",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -33,7 +33,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "terminal-karaoke=terminal-karaoke.main:run",
+            "terminal-karaoke=terminal_karaoke.main:run",
         ],
     },
 )

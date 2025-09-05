@@ -80,7 +80,7 @@ class LyricsFetcher:
         self.base_url = "https://lrclib.net/api"
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Terminal Karaoke Player (https://github.com/yourusername/terminal-karaoke)'
+            'User-Agent': 'Terminal Karaoke Player (https://github.com/hissterical/terminal-karaoke)'
         })
     
     def search_lyrics(self, artist, title):
