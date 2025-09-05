@@ -155,10 +155,10 @@ class UI:
         else:
             line_progress = min(1.0, max(0.0, (current_time - current_line_time) / line_duration))
         num_colored = int(len(line_text) * line_progress)
-        colored_text = line_text[:num_colored]
+        completed_text = line_text[:num_colored]
         remaining_text = line_text[num_colored:]
-        self.stdscr.addstr(y, x, colored_text, curses.color_pair(2))
-        self.stdscr.addstr(remaining_text, curses.color_pair(6))
+        self.stdscr.addstr(y, x, completed_text, curses.color_pair(2))  # Past color (darker)
+        self.stdscr.addstr(remaining_text, curses.color_pair(8))  # Current color (brighter/yellow)
 
     def draw(self, player):
         self.stdscr.clear()
