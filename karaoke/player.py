@@ -4,6 +4,7 @@ import os
 from .ui import UI
 from .lyrics import LyricsParser
 from .audio import AudioManager
+from .downloader import SongDownloader##
 import curses
 
 class KaraokePlayer:
@@ -33,6 +34,7 @@ class KaraokePlayer:
         self.ui = UI(stdscr)
         self.audio_manager = AudioManager()
         self.lyrics_parser = LyricsParser()
+        self.downloader = SongDownloader()
         
         # Initialize pygame mixer
         self.audio_manager.init_mixer()
@@ -40,6 +42,49 @@ class KaraokePlayer:
     def set_status(self, message, duration=1):
         self.status_message = message
         self.status_timer = time.time() + duration
+
+    def search_and_download(self, query):
+        """Search for and download a song with lyrics"""
+        self.ui.show_download_progress(f"Searching for: {query}")
+        
+        # Search YouTube
+        youtube_url = self.downloader.search_youtube(query)
+        if not youtube_url:
+            self.set_status("Song not found", 3)
+            return False
+        
+        self.ui.show_download_progress("Downloading audio...")
+        
+        # Download audio
+        mp3_path = self.downloader.download_audio(youtube_url, query)
+        if not mp3_path:
+            self.set_status("Download failed", 3)
+            return False
+        
+        self.ui.show_download_progress("Creating lyrics...")
+        
+        # For now, create basic LRC file since real lyrics fetching is complex
+        # In a real implementation, you'd fetch actual lyrics
+        try:
+            # Get song duration
+            temp_sound = pygame.mixer.Sound(mp3_path)
+            duration = temp_sound.get_length()
+            del temp_sound
+            
+            # Create basic LRC
+            lrc_content = self.downloader.create_basic_lrc(duration, "Unknown Artist", query)
+            lrc_path = self.downloader.save_lrc_file(lrc_content, mp3_path)
+            
+            if lrc_path and self.load_song(mp3_path, lrc_path):
+                self.seek_to(0.0)
+                self.set_status("Downloaded and ready!", 2)
+                return True
+            else:
+                self.set_status("Failed to create lyrics", 3)
+                return False
+        except Exception as e:
+            self.set_status(f"Error: {str(e)}", 3)
+            return False
 
     def load_song(self, song_path, lrc_path):
         self.song_path = song_path

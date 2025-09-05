@@ -102,7 +102,7 @@ class UI:
             self.stdscr.addstr(time_y, time_x, time_text, curses.color_pair(7))
 
     def format_time(self, seconds):
-        if seconds is None:
+        if seconds is None or seconds < 0:
             return "00:00"
         mins = int(seconds // 60)
         secs = int(seconds % 60)
@@ -197,14 +197,18 @@ class UI:
         
         self.stdscr.refresh()
 
-    def get_input(self, y, x):
+    def get_input(self, y, x, prompt=""):
+        if prompt:
+            self.stdscr.addstr(y, x, prompt, curses.color_pair(7))
+            y += 1
+            
         user_input = ""
         while True:
-            self.stdscr.addstr(y, x, " " * 30)
+            self.stdscr.addstr(y, x, " " * 50)
             self.stdscr.addstr(y, x, user_input + "_", curses.color_pair(2))
             self.stdscr.refresh()
             key = self.stdscr.getch()
-            if key == 10:
+            if key == 10:  # Enter
                 break
             elif key in [127, 8, 263]:  # Backspace
                 user_input = user_input[:-1]
@@ -212,10 +216,68 @@ class UI:
                 user_input += chr(key)
         return user_input
 
+    def show_search_menu(self, player):
+        self.stdscr.clear()
+        height, width = self.stdscr.getmaxyx()
+        title = " SEARCH & DOWNLOAD SONG "
+        title_x = (width - len(title)) // 2
+        self.stdscr.addstr(2, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        instructions = [
+            "Enter song name (e.g., 'Bohemian Rhapsody Queen')",
+            "or 'artist - title' format:",
+        ]
+        for i, text in enumerate(instructions):
+            y = 4 + i
+            x = (width - len(text)) // 2
+            if y < height - 2:
+                self.stdscr.addstr(y, x, text, curses.color_pair(7))
+        
+        query = self.get_input(7, (width//2) - 20)
+        if query:
+            player.search_and_download(query)
+        return True
+
     def show_file_loader(self, player):
         self.stdscr.clear()
         height, width = self.stdscr.getmaxyx()
-        title = " LOAD SONG AND LYRICS "
+        
+        # Show menu options
+        title = " TERMINAL KARAOKE "
+        title_x = (width - len(title)) // 2
+        self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        options = [
+            "1. Search and download song",
+            "2. Load local files",
+            "3. Quit"
+        ]
+        
+        for i, option in enumerate(options):
+            y = 4 + i
+            x = (width - len(option)) // 2
+            self.stdscr.addstr(y, x, option, curses.color_pair(7))
+        
+        self.stdscr.addstr(8, (width - 20) // 2, "Select option: ", curses.color_pair(2))
+        self.stdscr.refresh()
+        
+        while True:
+            key = self.stdscr.getch()
+            if key == ord('1'):
+                self.show_search_menu(player)
+                break
+            elif key == ord('2'):
+                self.show_local_file_loader(player)
+                break
+            elif key == ord('3') or key == ord('q'):
+                return False
+        
+        return True
+
+    def show_local_file_loader(self, player):
+        self.stdscr.clear()
+        height, width = self.stdscr.getmaxyx()
+        title = " LOAD LOCAL SONG AND LYRICS "
         title_x = (width - len(title)) // 2
         self.stdscr.addstr(2, title_x, title, curses.color_pair(1) | curses.A_BOLD)
         
@@ -232,10 +294,19 @@ class UI:
             if y < height - 2:
                 self.stdscr.addstr(y, x, text, curses.color_pair(7))
         
-        song_path = self.get_input(8, (width//2) - 10)
-        lrc_path = self.get_input(9, (width//2) - 10)
+        song_path = self.get_input(9, (width//2) - 10)
+        lrc_path = self.get_input(10, (width//2) - 10)
         
-        if player.load_song(song_path, lrc_path):
-            player.seek_to(0.0)
-            player.set_status("Now playing!", 2)
+        if song_path and lrc_path:
+            if player.load_song(song_path, lrc_path):
+                player.seek_to(0.0)
+                player.set_status("Now playing!", 2)
         return True
+
+    def show_download_progress(self, message):
+        height, width = self.stdscr.getmaxyx()
+        self.stdscr.clear()
+        msg = f"Downloading: {message}"
+        x = (width - len(msg)) // 2
+        self.stdscr.addstr(height//2, x, msg, curses.color_pair(3))
+        self.stdscr.refresh()

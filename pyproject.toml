@@ -5,6 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "beautifulsoup4>=4.13.5",
     "pygame>=2.6.1",
+    "requests>=2.32.5",
     "windows-curses>=2.4.1",
+    "yt-dlp>=2025.8.27",
 ]
