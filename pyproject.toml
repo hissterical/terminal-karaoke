@@ -1,13 +1,38 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "terminal-karaoke"
-version = "0.1.0"
-description = "karaoke in YOUr terminal"
-readme = "README.md"
-requires-python = ">=3.13"
-dependencies = [
-    "beautifulsoup4>=4.13.5",
-    "pygame>=2.6.1",
-    "requests>=2.32.5",
-    "windows-curses>=2.4.1",
-    "yt-dlp>=2025.8.27",
+version = "1.0.0"
+authors = [
+    {name = "Dexter Morgan", email = "paarivah@proton.me"},
 ]
+description = "A terminal-based karaoke player"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "pygame>=2.0.0",
+    "yt-dlp>=2023.3.4",
+    "requests>=2.28.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/terminal-karaoke"
+"Bug Tracker" = "https://github.com/yourusername/terminal-karaoke/issues"
+
+[project.scripts]
+terminal-karaoke = "terminal-karaoke.main:run"
