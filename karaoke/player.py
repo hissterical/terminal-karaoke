@@ -4,7 +4,7 @@ import os
 from .ui import UI
 from .lyrics import LyricsParser
 from .audio import AudioManager
-from .downloader import SongDownloader##
+from .downloader import SongDownloader
 import curses
 
 class KaraokePlayer:
@@ -43,12 +43,29 @@ class KaraokePlayer:
         self.status_message = message
         self.status_timer = time.time() + duration
 
+    def extract_artist_title(self, query):
+        """Extract artist and title from query"""
+        # Handle "artist - title" format
+        if ' - ' in query:
+            parts = query.split(' - ', 1)
+            return parts[0].strip(), parts[1].strip()
+        # Handle "artist:title" format
+        elif ':' in query:
+            parts = query.split(':', 1)
+            return parts[0].strip(), parts[1].strip()
+        # Default to query as title with unknown artist
+        return "Unknown Artist", query
+
     def search_and_download(self, query):
         """Search for and download a song with lyrics"""
-        self.ui.show_download_progress(f"Searching for: {query}")
+        # Extract artist and title
+        artist, title = self.extract_artist_title(query)
+        search_query = f"{artist} {title}"
+        
+        self.ui.show_download_progress(f"Searching for: {search_query}")
         
         # Search YouTube
-        youtube_url = self.downloader.search_youtube(query)
+        youtube_url = self.downloader.search_youtube(search_query)
         if not youtube_url:
             self.set_status("Song not found", 3)
             return False
@@ -56,23 +73,30 @@ class KaraokePlayer:
         self.ui.show_download_progress("Downloading audio...")
         
         # Download audio
-        mp3_path = self.downloader.download_audio(youtube_url, query)
+        mp3_path = self.downloader.download_audio(youtube_url, search_query)
         if not mp3_path:
             self.set_status("Download failed", 3)
             return False
         
-        self.ui.show_download_progress("Creating lyrics...")
+        self.ui.show_download_progress("Fetching lyrics...")
         
-        # For now, create basic LRC file since real lyrics fetching is complex
-        # In a real implementation, you'd fetch actual lyrics
+        # Try to get real lyrics
         try:
             # Get song duration
             temp_sound = pygame.mixer.Sound(mp3_path)
             duration = temp_sound.get_length()
             del temp_sound
             
-            # Create basic LRC
-            lrc_content = self.downloader.create_basic_lrc(duration, "Unknown Artist", query)
+            # Try to fetch lyrics
+            lyrics_fetcher = self.downloader.lyrics_fetcher
+            lrc_content = lyrics_fetcher.get_lyrics_by_metadata(artist, title, duration=duration)
+            
+            # If no lyrics found, create basic ones
+            if not lrc_content:
+                self.ui.show_download_progress("Creating basic lyrics...")
+                lrc_content = lyrics_fetcher.create_basic_lrc(duration, artist, title)
+            
+            # Save LRC file
             lrc_path = self.downloader.save_lrc_file(lrc_content, mp3_path)
             
             if lrc_path and self.load_song(mp3_path, lrc_path):

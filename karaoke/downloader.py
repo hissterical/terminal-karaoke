@@ -1,16 +1,15 @@
 import os
 import requests
 import yt_dlp
-import tempfile
 import re
-from bs4 import BeautifulSoup
-from urllib.parse import quote
+import time
 
 class SongDownloader:
     def __init__(self, download_dir=None):
         self.download_dir = download_dir or os.path.join(os.getcwd(), "downloads")
         if not os.path.exists(self.download_dir):
             os.makedirs(self.download_dir)
+        self.lyrics_fetcher = LyricsFetcher()
     
     def search_youtube(self, query):
         """Search YouTube for a song and return the first result URL"""
@@ -63,47 +62,6 @@ class SongDownloader:
             print(f"Error downloading audio: {e}")
             return None
     
-    def search_lyrics(self, artist, title):
-        """Search for lyrics using Genius API or web scraping"""
-        try:
-            # Try Genius-like search
-            search_query = f"{artist} {title} lyrics"
-            return self._scrape_lyrics(search_query)
-        except Exception as e:
-            print(f"Error searching lyrics: {e}")
-            return None
-    
-    def _scrape_lyrics(self, query):
-        """Scrape lyrics from the web"""
-        try:
-            # This is a simplified approach - in practice you'd want to use a proper lyrics API
-            search_url = f"https://www.google.com/search?q={quote(query)}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            
-            # For now, we'll create a basic LRC template
-            # In a real implementation, you'd scrape from lyrics sites
-            return None
-        except Exception as e:
-            return None
-    
-    def create_basic_lrc(self, duration_seconds, artist="", title=""):
-        """Create a basic LRC file with timing"""
-        # This creates a very basic LRC file - in practice you'd want real lyrics
-        lrc_content = f"[ti:{title}]\n[ar:{artist}]\n[ length: {duration_seconds}]\n\n"
-        
-        # Add some basic timing - this is just placeholder
-        minutes = int(duration_seconds // 60)
-        seconds = int(duration_seconds % 60)
-        lrc_content += f"[00:00.00]♪ {title} by {artist} ♪\n"
-        lrc_content += f"[00:05.00]♪ Instrumental ♪\n"
-        lrc_content += f"[00:30.00]♪ Instrumental ♪\n"
-        lrc_content += f"[01:00.00]♪ Instrumental ♪\n"
-        lrc_content += f"[0{minutes:02d}:{seconds:02d}.00]♪ End ♪\n"
-        
-        return lrc_content
-    
     def save_lrc_file(self, lrc_content, mp3_path):
         """Save LRC content to file"""
         lrc_path = mp3_path.rsplit('.', 1)[0] + '.lrc'
@@ -116,71 +74,87 @@ class SongDownloader:
             return None
 
 class LyricsFetcher:
-    """A more dedicated lyrics fetcher"""
+    """Fetch synchronized lyrics using LRCLIB API"""
     
     def __init__(self):
+        self.base_url = "https://lrclib.net/api"
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Terminal Karaoke Player (https://github.com/yourusername/terminal-karaoke)'
         })
     
-    def search_genius(self, artist, title):
-        """Search Genius for lyrics"""
+    def search_lyrics(self, artist, title):
+        """Search for lyrics using LRCLIB API"""
         try:
-            # This is a simplified version - a real implementation would use the Genius API
-            search_query = f"{artist} {title}".replace(' ', '%20')
-            search_url = f"https://genius.com/api/search/song?q={search_query}"
+            # Search for tracks
+            search_params = {
+                'q': f"{artist} {title}"
+            }
             
-            # Note: This is a simplified approach and may not work without proper API keys
-            # For a production version, you'd need to register for a Genius API key
+            search_response = self.session.get(f"{self.base_url}/search", params=search_params)
+            if search_response.status_code == 200:
+                search_results = search_response.json()
+                if search_results and len(search_results) > 0:
+                    # Use the first result
+                    track = search_results[0]
+                    track_id = track['id']
+                    
+                    # Get synced lyrics
+                    lyrics_response = self.session.get(f"{self.base_url}/get/{track_id}")
+                    if lyrics_response.status_code == 200:
+                        lyrics_data = lyrics_response.json()
+                        synced_lyrics = lyrics_data.get('syncedLyrics')
+                        if synced_lyrics:
+                            return synced_lyrics
             return None
         except Exception as e:
+            print(f"Error fetching lyrics: {e}")
             return None
     
-    def fetch_lyrics_from_url(self, url):
-        """Fetch lyrics from a given URL"""
+    def get_lyrics_by_metadata(self, artist, title, album="", duration=0):
+        """Get lyrics by metadata using LRCLIB API"""
         try:
-            response = self.session.get(url)
-            soup = BeautifulSoup(response.content, 'html.parser')
+            params = {
+                'artist_name': artist,
+                'track_name': title,
+                'album_name': album,
+                'duration': duration
+            }
             
-            # This is highly dependent on the site structure
-            # You'd need to customize this for each lyrics site
-            lyrics_div = soup.find('div', class_='lyrics')
-            if lyrics_div:
-                return lyrics_div.get_text()
-            
-            # Try another common pattern
-            lyrics_divs = soup.find_all('div', class_=re.compile(r'Lyrics__Container'))
-            if lyrics_divs:
-                lyrics = '\n'.join([div.get_text() for div in lyrics_divs])
-                return lyrics
-                
+            response = self.session.get(f"{self.base_url}/get", params=params)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('syncedLyrics', None)
+            elif response.status_code == 404:
+                # Try fuzzy search
+                return self.search_lyrics(artist, title)
             return None
         except Exception as e:
+            print(f"Error getting lyrics by metadata: {e}")
             return None
     
-    def convert_text_to_lrc(self, text, duration_seconds):
-        """Convert plain text lyrics to LRC format with basic timing"""
-        if not text:
-            return None
-            
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-        if not lines:
-            return None
-            
-        lrc_lines = []
-        lrc_lines.append("[by:Terminal Karaoke]")
-        lrc_lines.append("")
+    def create_basic_lrc(self, duration_seconds, artist="", title=""):
+        """Create a basic LRC file with timing when real lyrics aren't available"""
+        lrc_content = f"[ti:{title}]\n[ar:{artist}]\n[length: {self._format_time(duration_seconds)}]\n\n"
         
-        # Distribute lines evenly across the song duration
-        total_lines = len(lines)
-        seconds_per_line = duration_seconds / max(total_lines, 1)
+        # Add some basic timing
+        lrc_content += f"[00:00.00]♪ {title} by {artist} ♪\n"
+        if duration_seconds > 30:
+            lrc_content += f"[00:05.00]♪ Instrumental ♪\n"
+            lrc_content += f"[00:30.00]♪ Instrumental ♪\n"
+        if duration_seconds > 60:
+            lrc_content += f"[01:00.00]♪ Instrumental ♪\n"
         
-        for i, line in enumerate(lines):
-            timestamp = i * seconds_per_line
-            minutes = int(timestamp // 60)
-            seconds = int(timestamp % 60)
-            centiseconds = int((timestamp % 1) * 100)
-            lrc_lines.append(f"[{minutes:02d}:{seconds:02d}.{centiseconds:02d}]{line}")
+        minutes = int(duration_seconds // 60)
+        seconds = int(duration_seconds % 60)
+        lrc_content += f"[{minutes:02d}:{seconds:02d}.00]♪ End ♪\n"
         
-        return '\n'.join(lrc_lines)
+        return lrc_content
+    
+    def _format_time(self, seconds):
+        """Format seconds to MM:SS format"""
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes:02d}:{secs:02d}"
+
+# Also update our player to use the new lyrics fetcher
