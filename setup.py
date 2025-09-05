@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="terminal-karaoke",
-    version="1.0.1",
+    version="1.0.2",
     author="Dexter Morgan",
     author_email="paarivah@proton.me",
     description="A terminal-based karaoke player",

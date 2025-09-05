@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "terminal-karaoke"
-version = "1.0.1"
+version = "1.0.2"
 authors = [
     {name = "Dexter Morgan", email = "paarivah@proton.me"},
 ]
@@ -25,9 +25,11 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "pygame>=2.0.0",
-    "yt-dlp>=2023.3.4",
-    "requests>=2.28.0",
+    "beautifulsoup4>=4.13.5",
+    "pygame>=2.6.1",
+    "requests>=2.32.5",
+    "windows-curses>=2.4.1",
+    "yt-dlp>=2025.8.27",
 ]
 
 [project.urls]
