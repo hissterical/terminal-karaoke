@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="terminal-karaoke",
-    version="1.0.0",
+    version="1.0.1",
     author="Dexter Morgan",
     author_email="paarivah@proton.me",
     description="A terminal-based karaoke player",
@@ -24,6 +24,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "License :: OSI Approved :: MIT License",
     ],
     python_requires=">=3.7",
     install_requires=[
