@@ -1,5 +1,6 @@
 songs/
 downloads/
+library/
 
 # Python-generated files
 __pycache__/

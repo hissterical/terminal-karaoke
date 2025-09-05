@@ -6,7 +6,7 @@ import time
 
 class SongDownloader:
     def __init__(self, download_dir=None):
-        self.download_dir = download_dir or os.path.join(os.getcwd(), "downloads")
+        self.download_dir = download_dir or os.path.join(os.getcwd(), "library")
         if not os.path.exists(self.download_dir):
             os.makedirs(self.download_dir)
         self.lyrics_fetcher = LyricsFetcher()
@@ -130,7 +130,7 @@ class LyricsFetcher:
                 return self.search_lyrics(artist, title)
             return None
         except Exception as e:
-            print(f"Error getting lyrics by metadata: {e}")
+            print(f"Error getting lyrics by meta {e}")
             return None
     
     def create_basic_lrc(self, duration_seconds, artist="", title=""):
@@ -156,5 +156,3 @@ class LyricsFetcher:
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes:02d}:{secs:02d}"
-
-# Also update our player to use the new lyrics fetcher

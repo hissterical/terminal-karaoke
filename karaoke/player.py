@@ -91,10 +91,15 @@ class KaraokePlayer:
             lyrics_fetcher = self.downloader.lyrics_fetcher
             lrc_content = lyrics_fetcher.get_lyrics_by_metadata(artist, title, duration=duration)
             
-            # If no lyrics found, create basic ones
+            # If no lyrics found, inform user and don't create LRC file
             if not lrc_content:
-                self.ui.show_download_progress("Creating basic lyrics...")
-                lrc_content = lyrics_fetcher.create_basic_lrc(duration, artist, title)
+                self.set_status("Lyrics not found in database", 3)
+                # Clean up downloaded MP3 file since we can't use it without lyrics
+                try:
+                    os.remove(mp3_path)
+                except:
+                    pass
+                return False
             
             # Save LRC file
             lrc_path = self.downloader.save_lrc_file(lrc_content, mp3_path)
@@ -104,7 +109,7 @@ class KaraokePlayer:
                 self.set_status("Downloaded and ready!", 2)
                 return True
             else:
-                self.set_status("Failed to create lyrics", 3)
+                self.set_status("Failed to process lyrics", 3)
                 return False
         except Exception as e:
             self.set_status(f"Error: {str(e)}", 3)
