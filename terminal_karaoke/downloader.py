@@ -21,7 +21,7 @@ class SongDownloader:
                 'extract_flat': 'in_playlist',
             }
             
-            search_query = f"ytsearch1:{query} official audio"
+            search_query = f"ytsearch1:{query} official karaoke audio"
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 result = ydl.extract_info(search_query, download=False)
                 if result and 'entries' in result and result['entries']:
