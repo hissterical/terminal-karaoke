@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/terminal-karaoke.svg)](https://pypi.org/project/terminal-karaoke/)
 [![License](https://img.shields.io/pypi/l/terminal-karaoke.svg)](https://github.com/yourusername/terminal-karaoke/blob/main/LICENSE)
 
-![Terminal Karaoke Demo](image.jpg)
+![Terminal Karaoke Demo](image.png)
 
 ## 🌟 Features
 
@@ -23,6 +23,7 @@ pip install terminal-karaoke
 ```
 
 > **Windows users**: You might need to install `windows-curses`:
+>
 > ```bash
 > pip install windows-curses
 > ```
@@ -30,11 +31,13 @@ pip install terminal-karaoke
 ## 🎮 How to Use
 
 1. **Start the app**:
+
    ```bash
    terminal-karaoke
    ```
 
 2. **Choose your adventure**:
+
    - 🔍 **Search & Download**: Find any song on YouTube
    - 📚 **Play from Library**: Access your previously downloaded hits
    - 📁 **Load Local Files**: Use your own MP3s and LRC files
@@ -67,7 +70,6 @@ Tame Impala - Let it happen
 Travis Scott - My eyes
 ```
 
-
 ## 🙏 Acknowledgments
 
 - [LRCLIB](https://lrclib.net/) for the amazing lyrics database
@@ -78,4 +80,4 @@ Travis Scott - My eyes
 
 **Now get out there and show everyone what you're made of! 🎉**
 
-*Made with ❤️ and lots of terrible karaoke singing*
+_Made with ❤️ and lots of terrible karaoke singing_
