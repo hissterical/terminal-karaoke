@@ -1,6 +1,10 @@
 version = 1
 revision = 3
 requires-python = ">=3.9"
+resolution-markers = [
+    "python_full_version >= '3.10'",
+    "python_full_version < '3.10'",
+]
 
 [[package]]
 name = "beautifulsoup4"
@@ -187,7 +191,8 @@ dependencies = [
     { name = "pygame" },
     { name = "requests" },
     { name = "windows-curses" },
-    { name = "yt-dlp" },
+    { name = "yt-dlp", version = "2025.10.14", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "yt-dlp", version = "2025.12.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
 
 [package.metadata]
@@ -196,7 +201,7 @@ requires-dist = [
     { name = "pygame", specifier = ">=2.6.1" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "windows-curses", specifier = ">=2.4.1" },
-    { name = "yt-dlp", specifier = ">=2025.8.27" },
+    { name = "yt-dlp", specifier = ">=2024.12.1" },
 ]
 
 [[package]]
@@ -236,9 +241,24 @@ wheels = [
 
 [[package]]
 name = "yt-dlp"
-version = "2025.8.27"
+version = "2025.10.14"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f4/d4/d9dd231b03f09fdfb5f0fe70f30de0b5f59454aa54fa6b2b2aea49404988/yt_dlp-2025.8.27.tar.gz", hash = "sha256:ed74768d2a93b29933ab14099da19497ef571637f7aa375140dd3d882b9c1854", size = 3038374, upload-time = "2025-08-28T00:03:41.418Z" }
+resolution-markers = [
+    "python_full_version < '3.10'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/03/b7/dab729345e22891e79294273bc59c5213a1ec87331f49cb82ccea2b1bc9f/yt_dlp-2025.10.14.tar.gz", hash = "sha256:b18436aa9bb6f04354fd78d31ad9eeaae8c81b6a859f07072b25c18cd6c25844", size = 3045272, upload-time = "2025-10-14T23:39:52.688Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/9c/b69fc0c800f80b94ea2f8eff1d1f473fecee6aa337681d297ba7c7c5d3fd/yt_dlp-2025.8.27-py3-none-any.whl", hash = "sha256:0b8fd3bb7c54bc2e7ecb5cdac7d64c30e2503ea4d3dd9ae24d4f09e22aaa95f4", size = 3267059, upload-time = "2025-08-28T00:03:38.793Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/19/399c85d29bd7b366b31ede82698f7963374e5a3842ae9de0cde6514506b0/yt_dlp-2025.10.14-py3-none-any.whl", hash = "sha256:0b9da17eda1bbf48e2315130043d7993fd4ca1c5a35571f8231da1a910c9c115", size = 3248664, upload-time = "2025-10-14T23:39:49.95Z" },
+]
+
+[[package]]
+name = "yt-dlp"
+version = "2025.12.8"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.10'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/14/77/db924ebbd99d0b2b571c184cb08ed232cf4906c6f9b76eed763cd2c84170/yt_dlp-2025.12.8.tar.gz", hash = "sha256:b773c81bb6b71cb2c111cfb859f453c7a71cf2ef44eff234ff155877184c3e4f", size = 3088947, upload-time = "2025-12-08T00:16:01.649Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/2f/98c3596ad923f8efd32c90dca62e241e8ad9efcebf20831173c357042ba0/yt_dlp-2025.12.8-py3-none-any.whl", hash = "sha256:36e2584342e409cfbfa0b5e61448a1c5189e345cf4564294456ee509e7d3e065", size = 3291464, upload-time = "2025-12-08T00:15:58.556Z" },
 ]
