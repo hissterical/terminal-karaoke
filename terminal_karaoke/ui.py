@@ -341,8 +341,8 @@ class UI:
         options = [
             "1. Search and download song",
             "2. Play from library",
-            "3. Load local files",
-            "4. Quit"
+            # "3. Load local files",
+            "3. Quit"
         ]
         
         for i, option in enumerate(options):
@@ -361,42 +361,12 @@ class UI:
             elif key == ord('2'):
                 self.show_library_menu(player)
                 break
-            elif key == ord('3'):
-                self.show_local_file_loader(player)
-                break
             elif key == ord('4') or key == ord('q'):
                 return False
         
         return True
 
-    def show_local_file_loader(self, player):
-        self.stdscr.clear()
-        height, width = self.stdscr.getmaxyx()
-        title = " LOAD LOCAL SONG AND LYRICS "
-        title_x = (width - len(title)) // 2
-        self.stdscr.addstr(2, title_x, title, curses.color_pair(1) | curses.A_BOLD)
-        
-        instructions = [
-            "Enter paths to your .mp3 and .lrc files",
-            "Press ENTER after each path",
-            "",
-            "Song file (.mp3): ",
-            "Lyrics file (.lrc): "
-        ]
-        for i, text in enumerate(instructions):
-            y = 5 + i
-            x = (width - len(text)) // 2
-            if y < height - 2:
-                self.stdscr.addstr(y, x, text, curses.color_pair(7))
-        
-        song_path = self.get_input(9, (width//2) - 10)
-        lrc_path = self.get_input(10, (width//2) - 10)
-        
-        if song_path and lrc_path:
-            if player.load_song(song_path, lrc_path):
-                player.seek_to(0.0)
-                player.set_status("Now playing!", 2)
-        return True
+
 
     def show_download_progress(self, message):
         height, width = self.stdscr.getmaxyx()
