@@ -5,6 +5,7 @@ from .ui import UI
 from .lyrics import LyricsParser
 from .audio import AudioManager
 from .downloader import SongDownloader
+from .playlist import PlaylistManager
 import curses
 
 class KaraokePlayer:
@@ -22,6 +23,9 @@ class KaraokePlayer:
             'p': "Pause/Play",
             '←': "Back 5s",
             '→': "Forward 5s",
+            'n': "Next Song",
+            'b': "Previous Song",
+            's': "Toggle Shuffle",
             'q': "Quit"
         }
         
@@ -35,6 +39,11 @@ class KaraokePlayer:
         self.audio_manager = AudioManager()
         self.lyrics_parser = LyricsParser()
         self.downloader = SongDownloader()
+        self.playlist_manager = PlaylistManager(self.downloader.download_dir)
+        
+        # Playlist state
+        self.current_playlist = None
+        self.playlist_mode = False
         
         # Initialize pygame mixer
         self.audio_manager.init_mixer()
@@ -210,8 +219,80 @@ class KaraokePlayer:
                 new_pos = min(self.total_time, self.current_time() + 5)
                 self.seek_to(new_pos)
         
+        elif key == ord('n'):
+            # Next song in playlist
+            if self.playlist_mode and self.current_playlist:
+                self.play_next_in_playlist()
+        
+        elif key == ord('b'):
+            # Previous song in playlist
+            if self.playlist_mode and self.current_playlist:
+                self.play_previous_in_playlist()
+        
+        elif key == ord('s'):
+            # Toggle shuffle
+            if self.playlist_mode and self.current_playlist:
+                shuffle_state = self.current_playlist.toggle_shuffle()
+                mode = "ON" if shuffle_state else "OFF"
+                self.set_status(f"Shuffle {mode}", 2)
+                self.playlist_manager.save_playlist(self.current_playlist.name)
+        
         return True
 
+    def load_playlist(self, playlist):
+        """Load and start playing a playlist"""
+        self.current_playlist = playlist
+        self.playlist_mode = True
+        playlist.reset()
+        return self.play_current_in_playlist()
+    
+    def play_current_in_playlist(self):
+        """Play the current song in the playlist"""
+        if not self.current_playlist:
+            return False
+        
+        song = self.current_playlist.get_current_song()
+        if not song:
+            self.set_status("Playlist ended", 2)
+            return False
+        
+        mp3_path, lrc_path = song
+        if self.load_song(mp3_path, lrc_path):
+            self.seek_to(0.0)
+            song_name = os.path.basename(mp3_path)[:-4]
+            shuffle_indicator = "🔀 " if self.current_playlist.shuffle_mode else ""
+            song_num = self.current_playlist.current_index + 1
+            total_songs = len(self.current_playlist.songs)
+            self.set_status(f"{shuffle_indicator}[{song_num}/{total_songs}] {song_name}", 3)
+            return True
+        return False
+    
+    def play_next_in_playlist(self):
+        """Play the next song in the playlist"""
+        if not self.current_playlist:
+            return False
+        
+        self.audio_manager.stop()
+        self.current_playlist.next_song()
+        return self.play_current_in_playlist()
+    
+    def play_previous_in_playlist(self):
+        """Play the previous song in the playlist"""
+        if not self.current_playlist:
+            return False
+        
+        self.audio_manager.stop()
+        self.current_playlist.previous_song()
+        return self.play_current_in_playlist()
+    
+    def check_song_ended(self):
+        """Check if current song has ended and auto-play next"""
+        if self.playlist_mode and self.current_playlist:
+            current_time = self.current_time()
+            if current_time >= self.total_time - 0.5:  # 0.5s buffer
+                time.sleep(0.5)  # Brief pause between songs
+                self.play_next_in_playlist()
+    
     def cleanup(self):
         self.audio_manager.cleanup()
         curses.nocbreak()
@@ -226,6 +307,9 @@ class KaraokePlayer:
         
         while True:
             current_time = time.time()
+            
+            # Check if song ended and auto-play next
+            self.check_song_ended()
             
             # Update animation
             self.ui.update_animation(current_time)

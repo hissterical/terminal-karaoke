@@ -171,13 +171,24 @@ class UI:
         title_x = (width - len(title)) // 2
         self.stdscr.addstr(0, title_x, title, curses.color_pair(1) | curses.A_BOLD)
         
+        # Show playlist info if in playlist mode
+        if player.playlist_mode and player.current_playlist:
+            shuffle_icon = "🔀 " if player.current_playlist.shuffle_mode else ""
+            playlist_info = f"{shuffle_icon}Playlist: {player.current_playlist.name} [{player.current_playlist.current_index + 1}/{len(player.current_playlist.songs)}]"
+            info_x = (width - len(playlist_info)) // 2
+            self.stdscr.addstr(1, info_x, playlist_info, curses.color_pair(5))
+            song_line = 2
+        else:
+            song_line = 1
+        
         if player.song_path:
             song_name = os.path.basename(player.song_path)
-            self.stdscr.addstr(1, 2, f"Song: {song_name}", curses.color_pair(7))
+            self.stdscr.addstr(song_line, 2, f"Song: {song_name}", curses.color_pair(7))
         
         if time.time() < player.status_timer and player.status_message:
             status_x = (width - len(player.status_message)) // 2
-            self.stdscr.addstr(2, status_x, player.status_message, curses.color_pair(4))
+            status_y = song_line + 1
+            self.stdscr.addstr(status_y, status_x, player.status_message, curses.color_pair(4))
         
         if player.lyrics:
             # Draw lyrics with color coding
@@ -342,7 +353,8 @@ class UI:
             "1. Search and download song",
             "2. Play from library",
             "3. Load local files",
-            "4. Quit"
+            "4. Playlists",
+            "5. Quit"
         ]
         
         for i, option in enumerate(options):
@@ -350,7 +362,7 @@ class UI:
             x = (width - len(option)) // 2
             self.stdscr.addstr(y, x, option, curses.color_pair(7))
         
-        self.stdscr.addstr(9, (width - 20) // 2, "Select option: ", curses.color_pair(2))
+        self.stdscr.addstr(10, (width - 20) // 2, "Select option: ", curses.color_pair(2))
         self.stdscr.refresh()
         
         while True:
@@ -364,7 +376,10 @@ class UI:
             elif key == ord('3'):
                 self.show_local_file_loader(player)
                 break
-            elif key == ord('4') or key == ord('q'):
+            elif key == ord('4'):
+                self.show_playlist_menu(player)
+                break
+            elif key == ord('5') or key == ord('q'):
                 return False
         
         return True
@@ -405,3 +420,216 @@ class UI:
         x = (width - len(msg)) // 2
         self.stdscr.addstr(height//2, x, msg, curses.color_pair(3))
         self.stdscr.refresh()
+    
+    def show_playlist_menu(self, player):
+        """Show playlist management menu"""
+        self.stdscr.clear()
+        height, width = self.stdscr.getmaxyx()
+        
+        title = " PLAYLIST MENU "
+        title_x = (width - len(title)) // 2
+        self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        options = [
+            "1. Play existing playlist",
+            "2. Create new playlist",
+            "3. Create playlist from folder",
+            "4. Create 'All Songs' playlist",
+            "5. Back to main menu"
+        ]
+        
+        for i, option in enumerate(options):
+            y = 4 + i
+            x = (width - len(option)) // 2
+            self.stdscr.addstr(y, x, option, curses.color_pair(7))
+        
+        self.stdscr.addstr(11, (width - 20) // 2, "Select option: ", curses.color_pair(2))
+        self.stdscr.refresh()
+        
+        while True:
+            key = self.stdscr.getch()
+            if key == ord('1'):
+                self.show_playlist_selector(player)
+                break
+            elif key == ord('2'):
+                self.show_create_playlist(player)
+                break
+            elif key == ord('3'):
+                self.show_create_playlist_from_folder(player)
+                break
+            elif key == ord('4'):
+                playlist = player.playlist_manager.create_playlist_from_library()
+                if playlist:
+                    player.load_playlist(playlist)
+                    player.set_status("Playing All Songs", 2)
+                else:
+                    player.set_status("No songs in library", 2)
+                break
+            elif key == ord('5') or key == ord('q'):
+                break
+        return True
+    
+    def show_playlist_selector(self, player):
+        """Show list of playlists to select from"""
+        playlists = player.playlist_manager.list_playlists()
+        
+        if not playlists:
+            self.stdscr.clear()
+            height, width = self.stdscr.getmaxyx()
+            msg = "No playlists found. Create one first!"
+            x = (width - len(msg)) // 2
+            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
+            self.stdscr.refresh()
+            time.sleep(2)
+            return False
+        
+        self.stdscr.clear()
+        height, width = self.stdscr.getmaxyx()
+        
+        title = " SELECT PLAYLIST "
+        title_x = (width - len(title)) // 2
+        self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        self.stdscr.addstr(3, 2, "Available playlists:", curses.color_pair(7))
+        
+        # Display playlists
+        for i, playlist_name in enumerate(playlists[:height-10]):
+            playlist = player.playlist_manager.get_playlist(playlist_name)
+            song_count = len(playlist.songs)
+            display = f"{i+1}. {playlist_name} ({song_count} songs)"
+            self.stdscr.addstr(5 + i, 4, display, curses.color_pair(7))
+        
+        self.stdscr.addstr(height-2, 2, "Enter number or 'q' to cancel: ", curses.color_pair(2))
+        self.stdscr.refresh()
+        
+        while True:
+            key = self.stdscr.getch()
+            if key == ord('q'):
+                return False
+            elif ord('1') <= key <= ord('9'):
+                idx = key - ord('1')
+                if idx < len(playlists):
+                    playlist = player.playlist_manager.get_playlist(playlists[idx])
+                    if playlist:
+                        player.load_playlist(playlist)
+                        return True
+        return False
+    
+    def show_create_playlist(self, player):
+        """Create a new playlist by selecting songs"""
+        self.stdscr.clear()
+        height, width = self.stdscr.getmaxyx()
+        
+        title = " CREATE NEW PLAYLIST "
+        title_x = (width - len(title)) // 2
+        self.stdscr.addstr(2, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        # Get playlist name
+        self.stdscr.addstr(5, (width - 40) // 2, "Enter playlist name:", curses.color_pair(7))
+        playlist_name = self.get_input(6, (width - 30) // 2)
+        
+        if not playlist_name:
+            return False
+        
+        # Check if playlist exists
+        if player.playlist_manager.get_playlist(playlist_name):
+            self.stdscr.clear()
+            msg = "Playlist already exists!"
+            x = (width - len(msg)) // 2
+            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
+            self.stdscr.refresh()
+            time.sleep(2)
+            return False
+        
+        # Create empty playlist
+        if player.playlist_manager.create_playlist(playlist_name):
+            playlist = player.playlist_manager.get_playlist(playlist_name)
+            
+            # Add songs from library
+            self.add_songs_to_playlist(player, playlist)
+            
+            player.playlist_manager.save_playlist(playlist_name)
+            player.set_status(f"Created: {playlist_name}", 2)
+            return True
+        return False
+    
+    def add_songs_to_playlist(self, player, playlist):
+        """Add songs from library to a playlist"""
+        library_path = player.downloader.download_dir
+        if not os.path.exists(library_path):
+            return
+        
+        # Get all mp3 files
+        mp3_files = []
+        for file in os.listdir(library_path):
+            if file.lower().endswith('.mp3'):
+                mp3_path = os.path.join(library_path, file)
+                lrc_path = mp3_path[:-4] + '.lrc'
+                if os.path.exists(lrc_path):
+                    mp3_files.append((file[:-4], mp3_path, lrc_path))
+        
+        if not mp3_files:
+            return
+        
+        # Show song selection
+        while True:
+            self.stdscr.clear()
+            height, width = self.stdscr.getmaxyx()
+            
+            title = f" ADD SONGS TO: {playlist.name} "
+            title_x = (width - len(title)) // 2
+            self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+            
+            self.stdscr.addstr(3, 2, f"Songs in playlist: {len(playlist.songs)}", curses.color_pair(3))
+            self.stdscr.addstr(4, 2, "Available songs:", curses.color_pair(7))
+            
+            for i, (name, mp3_path, lrc_path) in enumerate(mp3_files[:height-10]):
+                # Check if already in playlist
+                in_playlist = (mp3_path, lrc_path) in playlist.songs
+                marker = "[+] " if in_playlist else "[ ] "
+                display = f"{i+1}. {marker}{name}"
+                color = curses.color_pair(3) if in_playlist else curses.color_pair(7)
+                self.stdscr.addstr(6 + i, 4, display, color)
+            
+            self.stdscr.addstr(height-3, 2, "Enter number to toggle, 'd' when done: ", curses.color_pair(2))
+            self.stdscr.refresh()
+            
+            key = self.stdscr.getch()
+            if key == ord('d'):
+                break
+            elif key == ord('q'):
+                break
+            elif ord('1') <= key <= ord('9'):
+                idx = key - ord('1')
+                if idx < len(mp3_files):
+                    name, mp3_path, lrc_path = mp3_files[idx]
+                    if (mp3_path, lrc_path) in playlist.songs:
+                        playlist.songs.remove((mp3_path, lrc_path))
+                    else:
+                        playlist.add_song(mp3_path, lrc_path)
+    
+    def show_create_playlist_from_folder(self, player):
+        """Create playlist from a folder"""
+        self.stdscr.clear()
+        height, width = self.stdscr.getmaxyx()
+        
+        title = " CREATE PLAYLIST FROM FOLDER "
+        title_x = (width - len(title)) // 2
+        self.stdscr.addstr(2, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+        
+        # Scan for folders
+        created = player.playlist_manager.scan_library_folders()
+        
+        if created:
+            self.stdscr.addstr(5, 4, f"Created {len(created)} playlist(s):", curses.color_pair(3))
+            for i, name in enumerate(created[:height-10]):
+                self.stdscr.addstr(7 + i, 6, f"- {name}", curses.color_pair(7))
+        else:
+            msg = "No folders with songs found in library"
+            x = (width - len(msg)) // 2
+            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
+        
+        self.stdscr.addstr(height-2, 2, "Press any key to continue...", curses.color_pair(2))
+        self.stdscr.refresh()
+        self.stdscr.getch()
+        return True

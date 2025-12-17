@@ -29,6 +29,9 @@ class AudioManager:
         
     def get_position(self):
         return pygame.mixer.music.get_pos()
+    
+    def stop(self):
+        pygame.mixer.music.stop()
         
     def cleanup(self):
         pygame.mixer.music.stop()
