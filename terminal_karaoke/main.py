@@ -19,6 +19,7 @@ def run():
     print("  p: Pause/Play")
     print("  ←: Back 5s")
     print("  →: Forward 5s")
+    print("  r: Toggle Recording (saves to recordings/ folder)")
     print("  q: Quit")
     print("\nStarting in 2 seconds...")
     time.sleep(2)

@@ -11,7 +11,7 @@ authors = [
 description = "A terminal-based karaoke player"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.13"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
@@ -25,7 +25,10 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
+    "audioop-lts>=0.2.2",
     "beautifulsoup4>=4.13.5",
+    "pyaudio>=0.2.14",
+    "pydub>=0.25.1",
     "pygame>=2.6.1",
     "requests>=2.32.5",
     "windows-curses>=2.4.1",
@@ -38,3 +41,4 @@ dependencies = [
 
 [project.scripts]
 terminal-karaoke = "terminal_karaoke.main:run"
+
