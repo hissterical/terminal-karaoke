@@ -1,6 +1,6 @@
 # 🎤 Terminal Karaoke 🎵
 
-**Sing your heart out in the comfort of your terminal!**
+**Built for For The Love Of Code 2025**
 
 [![PyPI version](https://img.shields.io/pypi/v/terminal-karaoke.svg)](https://pypi.org/project/terminal-karaoke/)
 [![License](https://img.shields.io/pypi/l/terminal-karaoke.svg)](https://github.com/yourusername/terminal-karaoke/blob/main/LICENSE)
