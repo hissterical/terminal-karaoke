@@ -22,6 +22,8 @@ class KaraokePlayer:
             'p': "Pause/Play",
             '←': "Back 5s",
             '→': "Forward 5s",
+            '↑': "Vol+",
+            '↓': "Vol-",
             'q': "Quit"
         }
         
@@ -209,6 +211,14 @@ class KaraokePlayer:
             if not self.paused:
                 new_pos = min(self.total_time, self.current_time() + 5)
                 self.seek_to(new_pos)
+        
+        elif key == curses.KEY_UP:
+            new_volume = self.audio_manager.increase_volume(0.1)
+            self.set_status(f"Volume: {int(new_volume * 100)}%", 1)
+        
+        elif key == curses.KEY_DOWN:
+            new_volume = self.audio_manager.decrease_volume(0.1)
+            self.set_status(f"Volume: {int(new_volume * 100)}%", 1)
         
         return True
 
