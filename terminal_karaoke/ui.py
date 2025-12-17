@@ -352,8 +352,8 @@ class UI:
         options = [
             "1. Search and download song",
             "2. Play from library",
-            "3. Load local files",
-            "4. Playlists",
+            "3. Playlists",
+            "4. Load local files",
             "5. Quit"
         ]
         
@@ -374,10 +374,11 @@ class UI:
                 self.show_library_menu(player)
                 break
             elif key == ord('3'):
-                self.show_local_file_loader(player)
+                # Go directly to playlist selector with All Songs as default
+                self.show_enhanced_playlist_selector(player)
                 break
             elif key == ord('4'):
-                self.show_playlist_menu(player)
+                self.show_local_file_loader(player)
                 break
             elif key == ord('5') or key == ord('q'):
                 return False
@@ -469,19 +470,19 @@ class UI:
                 break
         return True
     
-    def show_playlist_selector(self, player):
-        """Show list of playlists to select from"""
+    def show_enhanced_playlist_selector(self, player):
+        """Show playlists with All Songs as default option"""
+        # Ensure All Songs playlist exists
+        all_songs = player.playlist_manager.get_playlist("All Songs")
+        if not all_songs:
+            all_songs = player.playlist_manager.create_playlist_from_library()
+        
         playlists = player.playlist_manager.list_playlists()
         
-        if not playlists:
-            self.stdscr.clear()
-            height, width = self.stdscr.getmaxyx()
-            msg = "No playlists found. Create one first!"
-            x = (width - len(msg)) // 2
-            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
-            self.stdscr.refresh()
-            time.sleep(2)
-            return False
+        # Put All Songs first if it exists
+        if "All Songs" in playlists:
+            playlists.remove("All Songs")
+            playlists.insert(0, "All Songs")
         
         self.stdscr.clear()
         height, width = self.stdscr.getmaxyx()
@@ -490,22 +491,70 @@ class UI:
         title_x = (width - len(title)) // 2
         self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
         
+        # Add create/edit instructions in top-right
+        instruction = "Press 'c' to create | 'e' to edit"
+        self.stdscr.addstr(1, width - len(instruction) - 2, instruction, curses.color_pair(5))
+        
+        if not playlists:
+            msg = "No songs in library. Download or add songs first!"
+            x = (width - len(msg)) // 2
+            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
+            self.stdscr.addstr(height-2, 2, "Press 'c' to create playlist or 'q' to go back", curses.color_pair(2))
+            self.stdscr.refresh()
+            while True:
+                key = self.stdscr.getch()
+                if key == ord('q'):
+                    return False
+                elif key == ord('c'):
+                    self.show_create_playlist(player)
+                    return False
+            return False
+        
         self.stdscr.addstr(3, 2, "Available playlists:", curses.color_pair(7))
         
         # Display playlists
         for i, playlist_name in enumerate(playlists[:height-10]):
             playlist = player.playlist_manager.get_playlist(playlist_name)
             song_count = len(playlist.songs)
-            display = f"{i+1}. {playlist_name} ({song_count} songs)"
-            self.stdscr.addstr(5 + i, 4, display, curses.color_pair(7))
+            # Highlight All Songs
+            if playlist_name == "All Songs":
+                display = f"{i+1}. {playlist_name} ({song_count} songs) [Default]"
+                self.stdscr.addstr(5 + i, 4, display, curses.color_pair(3) | curses.A_BOLD)
+            else:
+                display = f"{i+1}. {playlist_name} ({song_count} songs)"
+                self.stdscr.addstr(5 + i, 4, display, curses.color_pair(7))
         
-        self.stdscr.addstr(height-2, 2, "Enter number or 'q' to cancel: ", curses.color_pair(2))
+        self.stdscr.addstr(height-2, 2, "Enter number, 'c' to create, 'e' to edit, or 'q' to go back: ", curses.color_pair(2))
         self.stdscr.refresh()
         
         while True:
             key = self.stdscr.getch()
             if key == ord('q'):
                 return False
+            elif key == ord('c'):
+                self.show_create_playlist(player)
+                # Refresh the playlist view after creating
+                return self.show_enhanced_playlist_selector(player)
+            elif key == ord('e'):
+                # Edit existing playlist
+                self.stdscr.addstr(height-1, 2, "Enter playlist number to edit: ", curses.color_pair(3))
+                self.stdscr.refresh()
+                edit_key = self.stdscr.getch()
+                if ord('1') <= edit_key <= ord('9'):
+                    idx = edit_key - ord('1')
+                    if idx < len(playlists):
+                        playlist = player.playlist_manager.get_playlist(playlists[idx])
+                        if playlist and playlist.name != "All Songs":
+                            self.edit_playlist(player, playlist)
+                            return self.show_enhanced_playlist_selector(player)
+                        elif playlist and playlist.name == "All Songs":
+                            self.stdscr.clear()
+                            msg = "Cannot edit 'All Songs' playlist"
+                            x = (width - len(msg)) // 2
+                            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
+                            self.stdscr.refresh()
+                            time.sleep(1.5)
+                            return self.show_enhanced_playlist_selector(player)
             elif ord('1') <= key <= ord('9'):
                 idx = key - ord('1')
                 if idx < len(playlists):
@@ -514,6 +563,10 @@ class UI:
                         player.load_playlist(playlist)
                         return True
         return False
+    
+    def show_playlist_selector(self, player):
+        """Legacy method - redirects to enhanced version"""
+        return self.show_enhanced_playlist_selector(player)
     
     def show_create_playlist(self, player):
         """Create a new playlist by selecting songs"""
@@ -599,6 +652,86 @@ class UI:
                 break
             elif key == ord('q'):
                 break
+            elif ord('1') <= key <= ord('9'):
+                idx = key - ord('1')
+                if idx < len(mp3_files):
+                    name, mp3_path, lrc_path = mp3_files[idx]
+                    if (mp3_path, lrc_path) in playlist.songs:
+                        playlist.songs.remove((mp3_path, lrc_path))
+                    else:
+                        playlist.add_song(mp3_path, lrc_path)
+    
+    def edit_playlist(self, player, playlist):
+        """Edit an existing playlist - add/remove songs"""
+        library_path = player.downloader.download_dir
+        if not os.path.exists(library_path):
+            return
+        
+        # Get all mp3 files
+        mp3_files = []
+        for file in os.listdir(library_path):
+            if file.lower().endswith('.mp3'):
+                mp3_path = os.path.join(library_path, file)
+                lrc_path = mp3_path[:-4] + '.lrc'
+                if os.path.exists(lrc_path):
+                    mp3_files.append((file[:-4], mp3_path, lrc_path))
+        
+        if not mp3_files:
+            return
+        
+        # Show song selection
+        while True:
+            self.stdscr.clear()
+            height, width = self.stdscr.getmaxyx()
+            
+            title = f" EDIT: {playlist.name} "
+            title_x = (width - len(title)) // 2
+            self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
+            
+            # Add delete instruction
+            delete_instr = "Press 'd' to delete this playlist"
+            self.stdscr.addstr(1, width - len(delete_instr) - 2, delete_instr, curses.color_pair(4))
+            
+            self.stdscr.addstr(3, 2, f"Songs in playlist: {len(playlist.songs)}", curses.color_pair(3))
+            self.stdscr.addstr(4, 2, "Available songs (toggle with numbers):", curses.color_pair(7))
+            
+            for i, (name, mp3_path, lrc_path) in enumerate(mp3_files[:height-10]):
+                # Check if already in playlist
+                in_playlist = (mp3_path, lrc_path) in playlist.songs
+                marker = "[+] " if in_playlist else "[ ] "
+                display = f"{i+1}. {marker}{name}"
+                color = curses.color_pair(3) if in_playlist else curses.color_pair(7)
+                self.stdscr.addstr(6 + i, 4, display, color)
+            
+            self.stdscr.addstr(height-3, 2, "Toggle songs, 'd' to delete playlist, 's' to save & exit: ", curses.color_pair(2))
+            self.stdscr.refresh()
+            
+            key = self.stdscr.getch()
+            if key == ord('s'):
+                player.playlist_manager.save_playlist(playlist.name)
+                self.stdscr.clear()
+                msg = f"Saved {playlist.name}!"
+                x = (width - len(msg)) // 2
+                self.stdscr.addstr(height//2, x, msg, curses.color_pair(3))
+                self.stdscr.refresh()
+                time.sleep(1)
+                break
+            elif key == ord('q'):
+                break
+            elif key == ord('d'):
+                # Confirm deletion
+                self.stdscr.addstr(height-2, 2, f"Delete '{playlist.name}'? (y/n): ", curses.color_pair(4) | curses.A_BOLD)
+                self.stdscr.refresh()
+                confirm = self.stdscr.getch()
+                if confirm == ord('y'):
+                    player.playlist_manager.delete_playlist(playlist.name)
+                    self.stdscr.clear()
+                    msg = f"Deleted {playlist.name}"
+                    x = (width - len(msg)) // 2
+                    self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
+                    self.stdscr.refresh()
+                    time.sleep(1)
+                    break
             elif ord('1') <= key <= ord('9'):
                 idx = key - ord('1')
                 if idx < len(mp3_files):
