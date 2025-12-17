@@ -5,7 +5,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/terminal-karaoke.svg)](https://pypi.org/project/terminal-karaoke/)
 [![License](https://img.shields.io/pypi/l/terminal-karaoke.svg)](https://github.com/yourusername/terminal-karaoke/blob/main/LICENSE)
 
-![Terminal Karaoke Demo](image.png)
+![Terminal Karaoke Demo](banner.png)
 
 ## 🌟 Features
 
