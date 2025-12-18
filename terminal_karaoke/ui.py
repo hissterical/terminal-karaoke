@@ -1,6 +1,7 @@
 import curses
 import os
 import time
+from .menus import MenuManager
 
 class UI:
     def __init__(self, stdscr):
@@ -12,6 +13,7 @@ class UI:
         self.last_cat_update = time.time()
         self.cat_update_interval = 0.15
         self.setup_colors()
+        self.menu_manager = MenuManager(stdscr)
 
     def setup_colors(self):
         curses.start_color()
@@ -171,8 +173,19 @@ class UI:
         title_x = (width - len(title)) // 2
         self.stdscr.addstr(0, title_x, title, curses.color_pair(1) | curses.A_BOLD)
         
+        # Show playlist info if in playlist mode
+        if player.playlist_mode and player.current_playlist:
+            shuffle_icon = "🔀 " if player.current_playlist.shuffle_mode else ""
+            playlist_info = f"{shuffle_icon}Playlist: {player.current_playlist.name} [{player.current_playlist.current_index + 1}/{len(player.current_playlist.songs)}]"
+            info_x = (width - len(playlist_info)) // 2
+            self.stdscr.addstr(1, info_x, playlist_info, curses.color_pair(5))
+            song_line = 2
+        else:
+            song_line = 1
+        
         if player.song_path:
             song_name = os.path.basename(player.song_path)
+            self.stdscr.addstr(song_line, 2, f"Song: {song_name}", curses.color_pair(7))
             self.stdscr.addstr(1, 2, f"Song: {song_name}", curses.color_pair(7))
             
             # Show recording indicator
@@ -183,7 +196,8 @@ class UI:
         
         if time.time() < player.status_timer and player.status_message:
             status_x = (width - len(player.status_message)) // 2
-            self.stdscr.addstr(2, status_x, player.status_message, curses.color_pair(4))
+            status_y = song_line + 1
+            self.stdscr.addstr(status_y, status_x, player.status_message, curses.color_pair(4))
         
         if player.lyrics:
             # Draw lyrics with color coding
@@ -215,196 +229,22 @@ class UI:
         self.stdscr.addstr(height - 1, controls_x, controls, curses.color_pair(5))
         
         self.stdscr.refresh()
-
-    def get_input(self, y, x, prompt=""):
-        if prompt:
-            self.stdscr.addstr(y, x, prompt, curses.color_pair(7))
-            y += 1
-            
-        user_input = ""
-        while True:
-            self.stdscr.addstr(y, x, " " * 50)
-            self.stdscr.addstr(y, x, user_input + "_", curses.color_pair(2))
-            self.stdscr.refresh()
-            key = self.stdscr.getch()
-            if key == 10:  # Enter
-                break
-            elif key in [127, 8, 263]:  # Backspace
-                user_input = user_input[:-1]
-            elif 32 <= key <= 126:
-                user_input += chr(key)
-        return user_input
-
-    def show_search_menu(self, player):
-        self.stdscr.clear()
-        height, width = self.stdscr.getmaxyx()
-        title = " SEARCH & DOWNLOAD SONG "
-        title_x = (width - len(title)) // 2
-        self.stdscr.addstr(2, title_x, title, curses.color_pair(1) | curses.A_BOLD)
-        
-        instructions = [
-            "Enter 'artist - title' format: (e.g., 'Tame Impala - Let it Happen')",
-            "or song name if its popular and unique",
-        ]
-        for i, text in enumerate(instructions):
-            y = 4 + i
-            x = (width - len(text)) // 2
-            if y < height - 2:
-                self.stdscr.addstr(y, x, text, curses.color_pair(7))
-        
-        query = self.get_input(7, (width//2) - 20)
-        if query:
-            player.search_and_download(query)
-        return True
-
-    def show_library_menu(self, player):
-        """Show songs available in the library folder"""
-        library_path = player.downloader.download_dir
-        if not os.path.exists(library_path):
-            self.stdscr.clear()
-            height, width = self.stdscr.getmaxyx()
-            msg = "Library folder not found"
-            x = (width - len(msg)) // 2
-            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
-            self.stdscr.refresh()
-            time.sleep(2)
-            return False
-            
-        # Find MP3 files in library
-        mp3_files = [f for f in os.listdir(library_path) if f.lower().endswith('.mp3')]
-        
-        if not mp3_files:
-            self.stdscr.clear()
-            height, width = self.stdscr.getmaxyx()
-            msg = "No songs found in library"
-            x = (width - len(msg)) // 2
-            self.stdscr.addstr(height//2, x, msg, curses.color_pair(4))
-            self.stdscr.refresh()
-            time.sleep(2)
-            return False
-            
-        # Display menu
-        self.stdscr.clear()
-        height, width = self.stdscr.getmaxyx()
-        title = " SELECT SONG FROM LIBRARY "
-        title_x = (width - len(title)) // 2
-        self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
-        
-        self.stdscr.addstr(3, 2, "Available songs:", curses.color_pair(7))
-        
-        # Display songs with numbers
-        for i, mp3_file in enumerate(mp3_files[:height-8]):
-            song_name = mp3_file[:-4]  # Remove .mp3 extension
-            self.stdscr.addstr(5 + i, 4, f"{i+1}. {song_name}", curses.color_pair(7))
-        
-        self.stdscr.addstr(height-2, 2, "Enter song number or 'q' to quit: ", curses.color_pair(2))
-        self.stdscr.refresh()
-        
-        while True:
-            key = self.stdscr.getch()
-            if key == ord('q'):
-                return False
-            elif ord('1') <= key <= ord('9'):
-                song_index = key - ord('1')
-                if song_index < len(mp3_files):
-                    mp3_file = mp3_files[song_index]
-                    mp3_path = os.path.join(library_path, mp3_file)
-                    lrc_path = mp3_path[:-4] + '.lrc'
-                    
-                    # Check if LRC file exists
-                    if not os.path.exists(lrc_path):
-                        player.set_status("No lyrics file found", 3)
-                        return False
-                    
-                    if player.load_song(mp3_path, lrc_path):
-                        player.seek_to(0.0)
-                        player.set_status("Now playing!", 2)
-                        return True
-            elif key == ord('0') and len(mp3_files) >= 10:
-                # Handle 10th song
-                mp3_file = mp3_files[9]
-                mp3_path = os.path.join(library_path, mp3_file)
-                lrc_path = mp3_path[:-4] + '.lrc'
-                
-                if not os.path.exists(lrc_path):
-                    player.set_status("No lyrics file found", 3)
-                    return False
-                
-                if player.load_song(mp3_path, lrc_path):
-                    player.seek_to(0.0)
-                    player.set_status("Now playing!", 2)
-                    return True
-
+    
+    # Delegate menu methods to MenuManager
     def show_file_loader(self, player):
-        self.stdscr.clear()
-        height, width = self.stdscr.getmaxyx()
-        
-        # Show menu options
-        title = " TERMINAL KARAOKE "
-        title_x = (width - len(title)) // 2
-        self.stdscr.addstr(1, title_x, title, curses.color_pair(1) | curses.A_BOLD)
-        
-        options = [
-            "1. Search and download song",
-            "2. Play from library",
-            "3. Load local files",
-            "4. Quit"
-        ]
-        
-        for i, option in enumerate(options):
-            y = 4 + i
-            x = (width - len(option)) // 2
-            self.stdscr.addstr(y, x, option, curses.color_pair(7))
-        
-        self.stdscr.addstr(9, (width - 20) // 2, "Select option: ", curses.color_pair(2))
-        self.stdscr.refresh()
-        
-        while True:
-            key = self.stdscr.getch()
-            if key == ord('1'):
-                self.show_search_menu(player)
-                break
-            elif key == ord('2'):
-                self.show_library_menu(player)
-                break
-            elif key == ord('3'):
-                self.show_local_file_loader(player)
-                break
-            elif key == ord('4') or key == ord('q'):
-                return False
-        
-        return True
-
+        return self.menu_manager.show_file_loader(player)
+    
+    def show_search_menu(self, player):
+        return self.menu_manager.show_search_menu(player)
+    
+    def show_library_menu(self, player):
+        return self.menu_manager.show_library_menu(player)
+    
     def show_local_file_loader(self, player):
-        self.stdscr.clear()
-        height, width = self.stdscr.getmaxyx()
-        title = " LOAD LOCAL SONG AND LYRICS "
-        title_x = (width - len(title)) // 2
-        self.stdscr.addstr(2, title_x, title, curses.color_pair(1) | curses.A_BOLD)
-        
-        instructions = [
-            "Enter paths to your .mp3 and .lrc files",
-            "Press ENTER after each path",
-            "",
-            "Song file (.mp3): ",
-            "Lyrics file (.lrc): "
-        ]
-        for i, text in enumerate(instructions):
-            y = 5 + i
-            x = (width - len(text)) // 2
-            if y < height - 2:
-                self.stdscr.addstr(y, x, text, curses.color_pair(7))
-        
-        song_path = self.get_input(9, (width//2) - 10)
-        lrc_path = self.get_input(10, (width//2) - 10)
-        
-        if song_path and lrc_path:
-            if player.load_song(song_path, lrc_path):
-                player.seek_to(0.0)
-                player.set_status("Now playing!", 2)
-        return True
-
+        return self.menu_manager.show_local_file_loader(player)
+    
     def show_download_progress(self, message):
+        return self.menu_manager.show_download_progress(message)
         height, width = self.stdscr.getmaxyx()
         self.stdscr.clear()
         msg = f"Downloading: {message}"
