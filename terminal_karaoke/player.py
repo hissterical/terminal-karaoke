@@ -6,6 +6,7 @@ from .lyrics import LyricsParser
 from .audio import AudioManager
 from .downloader import SongDownloader
 from .playlist import PlaylistManager
+from .recorder import AudioRecorder
 import curses
 
 class KaraokePlayer:
@@ -26,6 +27,7 @@ class KaraokePlayer:
             'n': "Next Song",
             'b': "Previous Song",
             's': "Toggle Shuffle",
+            'r': "Record",
             'q': "Quit"
         }
         
@@ -33,6 +35,9 @@ class KaraokePlayer:
         self.seek_offset = 0.0
         self.playback_start_time = 0
         self.last_update_time = 0
+        
+        # Recording
+        self.is_recording = False
         
         # Components
         self.ui = UI(stdscr)
@@ -44,6 +49,7 @@ class KaraokePlayer:
         # Playlist state
         self.current_playlist = None
         self.playlist_mode = False
+        self.recorder = AudioRecorder()
         
         # Initialize pygame mixer
         self.audio_manager.init_mixer()
@@ -236,6 +242,25 @@ class KaraokePlayer:
                 mode = "ON" if shuffle_state else "OFF"
                 self.set_status(f"Shuffle {mode}", 2)
                 self.playlist_manager.save_playlist(self.current_playlist.name)
+        elif key == ord('r'):
+            if not self.song_path:
+                self.set_status("Load a song first", 2)
+            elif self.is_recording:
+                # Stop recording
+                self.is_recording = False
+                self.set_status("Saving recording...", 1)
+                output_path = self.recorder.stop_recording(self.song_path, self.current_time())
+                if output_path:
+                    self.set_status(f"Saved: {os.path.basename(output_path)}", 2)
+                else:
+                    self.set_status("Failed to save recording", 2)
+            else:
+                # Start recording
+                if self.recorder.start_recording(self.current_time()):
+                    self.is_recording = True
+                    self.set_status("Recording started!", 2)
+                else:
+                    self.set_status("Failed to start recording", 3)
         
         return True
 
@@ -294,6 +319,10 @@ class KaraokePlayer:
                 self.play_next_in_playlist()
     
     def cleanup(self):
+        # Stop recording if active
+        if self.is_recording:
+            self.recorder.stop_recording(self.song_path, self.current_time())
+        self.recorder.cleanup()
         self.audio_manager.cleanup()
         curses.nocbreak()
         self.stdscr.keypad(False)
