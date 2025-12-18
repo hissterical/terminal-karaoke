@@ -174,6 +174,12 @@ class UI:
         if player.song_path:
             song_name = os.path.basename(player.song_path)
             self.stdscr.addstr(1, 2, f"Song: {song_name}", curses.color_pair(7))
+            
+            # Show recording indicator
+            if hasattr(player, 'is_recording') and player.is_recording:
+                rec_indicator = " [●REC] "
+                rec_x = width - len(rec_indicator) - 2
+                self.stdscr.addstr(1, rec_x, rec_indicator, curses.color_pair(4) | curses.A_BOLD)
         
         if time.time() < player.status_timer and player.status_message:
             status_x = (width - len(player.status_message)) // 2
